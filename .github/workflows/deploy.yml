@@ -1,0 +1,41 @@
+name: Tagged release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build-with-jpackage:
+    name: Build on .deb package with jpackage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: |
+          ./mvnw -P jpackage -P linux-deb --batch-mode --update-snapshots clean compile javafx:jlink jpackage:jpackage
+
+      - name: clone ppa
+        uses: actions/checkout@v4
+        with:
+            repository: JayPi4c/ppa
+            path: ppa
+            token: ${{ secrets.PAT }}
+
+      - name: push to ppa
+        run: |
+          cp target/dist/*.deb ppa/ubuntu/
+          cd ppa
+          git config user.name "Java package deployer (Bot)"
+          git config user.email "<>"
+          git add .
+          git commit -m "ExampleJavaPackage $GITHUB_REF_NAME"
+          git push
